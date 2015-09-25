@@ -54,26 +54,25 @@ public class ServerTestMain {
 		Node myNode = new Node(myNodeIP, VNodeNum, nodeName, nodeID);
 		MD5Hash tmpHash=new MD5Hash();
 		try {
-			Agilor agilorClient=new Agilor("127.0.0.1",9090,20000);
-			agilorClient.open();
+			Agilor aClient=new Agilor(myNodeIP,9090,20000);
+			aClient.open();
 		
-		ComFuncs.travelInConsistentHash(myNode, new ConsistentHashVirtualNodeTravel() {
-			
-			@Override
-			public void inFor(String vName) {
-				// TODO Auto-generated method stub
-				
-				Device device=new Device();
-				device.setName(String.valueOf(tmpHash.hash(vName)));
-				try {
-					agilorClient.insert(device);
-				} catch (TException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-			}
-		});
-			agilorClient.close();
+//			ComFuncs.travelInConsistentHash(myNode, new ConsistentHashVirtualNodeTravel() {
+//
+//				@Override
+//				public void inFor(String vName) {//					// TODO Auto-generated method stub
+//
+//					Device device=new Device();
+//					device.setName(String.valueOf(tmpHash.hash(vName)));
+//					try {
+//						aClient.insert(device);
+//					} catch (TException e) {
+//						// TODO Auto-generated catch block
+//						e.printStackTrace();
+//					}
+//				}
+//			});
+			aClient.close();
 		}catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

@@ -39,6 +39,7 @@ public class NodeHandler {
 	ZnodeGetDataCallback taskCallback;
 	Node myNode;
 	ConsistentHash nodeList;
+	int finishTrsCounter;
 	final static Logger logger = LoggerFactory.getLogger(LogTestMain.class);
 	public NodeHandler(String hostPort, String znodeServerInfo,
 			String znodeClientInfo, Node myNode) {
@@ -50,7 +51,7 @@ public class NodeHandler {
 		nodeList = new ConsistentHash(new MD5Hash());
 		try {
 			taskExecutor = new Executor(hostPort, Constant.zRootNode
-					+ znodeServerInfo);
+					+ znodeServerInfo,Constant.zkTimeLong);
 		} catch (KeeperException e) {
 			// TODO Auto-generated catch block
 			System.err.println("taskExecutor in NodeHandler error");
@@ -60,6 +61,7 @@ public class NodeHandler {
 			System.err.println("taskExecutor in NodeHandler error");
 			e.printStackTrace();
 		}
+		finishTrsCounter=0;
 	}
 
 	public void stratHandler() {
@@ -99,9 +101,10 @@ public class NodeHandler {
 								.hasNext();) {
 //							consistentHashLock.readLock().lock();
 							Node tmpNode = iter1.next();
-							System.out.println(myNode.getName());
-							if (nodeList.getNodes().contains(tmpNode) == false) {
+							if (!nodeList.getNodes().contains(tmpNode)) {
 								// transfer data to new node
+								System.out.println("find New Node : "+tmpNode.getName());
+								nodeList.add(tmpNode);
 								try {
 									parent.zk.create(
 											Constant.zRootNode
@@ -112,7 +115,10 @@ public class NodeHandler {
 											Ids.OPEN_ACL_UNSAFE,
 											CreateMode.PERSISTENT);
 									//migrate my tag to new Node
-									addTag2NewNode(tmpNode);
+									List<Target>tmpRes=addTag2NewNode(tmpNode);
+									for(int i=0;i<tmpRes.size();i++){
+										System.out.println(tmpRes.get(i).getName());
+									}
 									//write
 									parent.zk.delete(
 											Constant.zRootNode
@@ -143,6 +149,7 @@ public class NodeHandler {
 							Stat client = parent.zk.exists(Constant.zRootNode
 									+ znodeClientInfo, false);
 							if (client == null) {
+								//if clientInfo in zk is null init value
 								JSONObject tmpJo = new JSONObject();
 								JSONArray tmpJa = new JSONArray();
 								tmpJa.put(myNode.nodeToMap());
@@ -153,12 +160,14 @@ public class NodeHandler {
 										.getBytes(), Ids.OPEN_ACL_UNSAFE,
 										CreateMode.PERSISTENT);
 							} else {
+								//put my info to Client
 								JSONObject clientJO = ComFuncs
 										.byte2Json(parent.zk.getData(
 												Constant.zRootNode
 														+ znodeClientInfo,
 												null, client));
 								JSONArray tmpJa = null;
+								//put TMP info to zk Client
 								if (!clientJO
 										.has(Constant.zkNodeClientTmpListName) ) {
 									tmpJa = new JSONArray();
@@ -169,6 +178,7 @@ public class NodeHandler {
 								tmpJa.put(myNode.nodeToMap());
 								clientJO.put(Constant.zkNodeClientTmpListName,
 										tmpJa);
+								//put TMP info to zk Client
 								if (clientJO
 										.has(Constant.zkNodeClientFinalListName)) {
 									tmpJa = clientJO
@@ -178,14 +188,12 @@ public class NodeHandler {
 											Constant.zkNodeClientFinalListName,
 											tmpJa);
 								} else {
-									System.out.println("error!");
+									System.out.println("Client Info in Zk error! when New one comes");
 								}
 								parent.zk.setData(Constant.zRootNode
 										+ znodeClientInfo, clientJO.toString()
 										.getBytes(), -1);
-								// parent.setData(clientJO.toString());
 							}
-
 							parent.zk.create(Constant.zRootNode
 									+ znodeServerInfo + "/" + myNode.getName(),
 									"addNode".getBytes(), Ids.OPEN_ACL_UNSAFE,
@@ -200,7 +208,7 @@ public class NodeHandler {
 									new Executor(hostPort, Constant.zRootNode
 											+ znodeServerInfo + "/"
 											+ myNode.getName() + "/"
-											+ tmpNode.getName(),
+											+ tmpNode.getName(),Constant.zkTimeNormal,
 											new ZnodeGetDataCallback() {
 
 												@Override
@@ -210,7 +218,7 @@ public class NodeHandler {
 													// Auto-generated
 													// method stub
 													System.out
-															.println(new String(
+															.println("subReceive "+new String(
 																	data));
 												}
 
@@ -221,8 +229,8 @@ public class NodeHandler {
 													// method stub
 													finishTrsCounterLock
 															.writeLock().lock();
-													parent.finishTrsCounter++;
-													if (parent.finishTrsCounter == tmpTreeSet
+													finishTrsCounter++;
+													if (finishTrsCounter == tmpTreeSet
 															.size()) {
 														System.out
 																.println("finish Transfer");
@@ -296,12 +304,19 @@ public class NodeHandler {
 															// Auto-generated
 															// catch block
 															e.printStackTrace();
+														}finally {
+															finishTrsCounter=0;
 														}
 
 													}
 													finishTrsCounterLock
 															.writeLock()
 															.unlock();
+													try {
+														parent.zk.close();
+													} catch (InterruptedException e) {
+														e.printStackTrace();
+													}
 												}
 											}).start();
 								}
@@ -318,7 +333,7 @@ public class NodeHandler {
 							e.printStackTrace();
 						} finally {
 							if (parent.zk != null) {
-								if (nodeList.getNodes().isEmpty() == false
+								if (!nodeList.getNodes().isEmpty()
 										&& nodeList.getNodes().size() == 1) {
 									try {
 										parent.zk.delete(Constant.zRootNode
@@ -377,7 +392,8 @@ public class NodeHandler {
 					NodeDevice tmpNodeDevice=tmpNodeList.get(tList.get(j).getName());
 					if(newNode.getIp().compareTo(tmpNodeDevice.getNode().getIp())==0){
 						migrateTargets.add(tList.get(j));
-						ComFuncs.createTag(newAgilor,tList.get(j).getName(),tmpNodeDevice.getDevice(),logger);
+						ComFuncs.createTag(newAgilor, tList.get(j).getName(), tmpNodeDevice.getDevice(), logger);
+//						System.out.println("Created : "+tList.get(j).getName());
 					}
 				}
 			}

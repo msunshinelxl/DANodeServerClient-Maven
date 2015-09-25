@@ -55,7 +55,7 @@ public class ClientNodeHandler {
 		this.znodeClientInfo=znodeClientInfo;
 		try {
 			taskExecutor = new Executor(hostPort, Constant.zRootNode
-					+ znodeClientInfo);
+					+ znodeClientInfo,Constant.zkTimeLong);
 		} catch (KeeperException e) {
 			// TODO Auto-generated catch block
 			System.err.println("taskExecutor in NodeHandler KeeperException");
@@ -124,14 +124,18 @@ public class ClientNodeHandler {
 				}
 				try {
 					taskExecutor = new Executor(hostPort, Constant.zRootNode
-							+ znodeClientInfo);
+							+ znodeClientInfo,Constant.zkTimeLong);
+					parent.zk.close();
 				} catch (KeeperException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
+				}catch (InterruptedException e) {
+					e.printStackTrace();
 				}
+
 				stratHandler();
 			}
 			

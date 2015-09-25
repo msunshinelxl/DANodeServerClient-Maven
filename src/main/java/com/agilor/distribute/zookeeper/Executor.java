@@ -26,28 +26,29 @@ public class Executor extends Thread implements Watcher,
 
 	ZnodeGetDataCallback getdataCallback;
 	
-	public int finishTrsCounter=0;
 	
 	private AtomicReference<NodeStateType> stat;
 	
-	public Executor(String hostPort, String znode,
+	public Executor(String hostPort, String znode,int timeOut,
 			ZnodeGetDataCallback getdataCallback) throws KeeperException,
 			IOException {
-		init(hostPort,znode);
+		init(hostPort,znode,timeOut);
 		this.getdataCallback = getdataCallback;
 		
 	}
 	
-	public Executor(String hostPort, String znode) throws KeeperException,
+	public Executor(String hostPort, String znode,int timeOut) throws KeeperException,
 	IOException {
-		init(hostPort,znode);
+		init(hostPort,znode,timeOut);
 		this.getdataCallback = null;
 	}
-	
-	private void init(String hostPort, String znode)throws KeeperException,
+
+
+
+	private void init(String hostPort, String znode,int timeOut)throws KeeperException,
 	IOException{
 		this.znode = znode;
-		zk = new ZooKeeper(hostPort, 3000, this);
+		zk = new ZooKeeper(hostPort, timeOut, this);
 		dm = new DataMonitor(zk, znode, null, this);
 		stat=new AtomicReference<NodeStateType>();
 	}
@@ -61,7 +62,6 @@ public class Executor extends Thread implements Watcher,
 					wait();
 				}
 				System.out.println(znode + "  died");
-				zk.close();
 				if(getdataCallback!=null)
 					getdataCallback.onClose(this);
 			}
