@@ -5,9 +5,15 @@ public class Constant {
 	public final static String zkNodeClientTmpListName="tmpList";
 	public final static String zRootNode="/agilorRootPath";
 	public final static int agilorNodeThriftPort=9090;
-	public final static int agilorNodeThriftTimeout=20000;
+    public final static int agilorServerPort=10001;
+	public final static int agilorNodeServerTimeout=20000;
 	public final static int agilorNodeThriftLongTimeout=200000;
 	public final static int zkTimeNormal=10000;
 	public final static int zkTimeShort=3000;
 	public final static int zkTimeLong=100000;
+	public final static int TYPEFLOAT=1;
+    public final static int TYPEINT=2;
+    public final static int TYPESTR=3;
+    public final static int TYPEBOOL=4;
+	public final static String deviceNamePre="%#_DeviceState_";
 }

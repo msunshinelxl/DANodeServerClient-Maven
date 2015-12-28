@@ -1,19 +1,19 @@
 package com.agilor.distribute.consistenthash;
 
-import agilor.distributed.storage.inter.jlient.Device;
+
 
 public class NodeDevice {
 	private Node myNode;
-	private Device myDevice;
+	private String myDevice;
 	public NodeDevice(Node node,String deviceName){
 		myNode=new Node(node);
-		myDevice=new Device();
-		myDevice.setName(deviceName);
+		myDevice=new String();
+		myDevice=(deviceName);
 	}
 	public Node getNode(){
 		return myNode;
 	}
-	public Device getDevice(){
+	public String getDevice(){
 		return myDevice;
 	}
 }

@@ -1,12 +1,15 @@
 package com.agilor.distribute.server.nameManager;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.TreeSet;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import agilor.distributed.communication.client.Client;
+import agilor.distributed.communication.client.Target;
+import agilor.distributed.communication.client.Value;
+import agilor.distributed.communication.client.ValueCollection;
+import agilor.distributed.communication.protocol.SimpleProtocol;
+import agilor.distributed.communication.socket.Connection;
 import com.agilor.distribute.consistenthash.NodeDevice;
 import com.agilor.distribute.test.LogTestMain;
 import org.apache.zookeeper.CreateMode;
@@ -17,9 +20,6 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import agilor.distributed.storage.inter.jlient.Agilor;
-import agilor.distributed.storage.inter.jlient.Device;
-import agilor.distributed.storage.inter.jlient.Target;
 
 import com.agilor.distribute.common.ComFuncs;
 import com.agilor.distribute.common.Constant;
@@ -120,6 +120,8 @@ public class NodeHandler {
 										System.out.println(tmpRes.get(i).getName());
 									}
 									//write
+                                    writeHisVal2NewNode(tmpRes,tmpNode);
+                                    //end write
 									parent.zk.delete(
 											Constant.zRootNode
 													+ znodeServerInfo + "/"
@@ -375,26 +377,24 @@ public class NodeHandler {
 		return nodeList;
 	}
 	private List<Target> addTag2NewNode(Node newNode){
-		Agilor agilor,newAgilor;
+		Client agilor,newAgilor;
 		List<Target> migrateTargets=null;
 		try {
-			agilor = new Agilor(myNode.getIp(),Constant.agilorNodeThriftPort,Constant.agilorNodeThriftLongTimeout);
+			agilor = new Client(new Connection(myNode.getIp(), 10001, 5000, SimpleProtocol.getInstance()));
 
-			newAgilor=new Agilor(newNode.getIp(),Constant.agilorNodeThriftPort,Constant.agilorNodeThriftLongTimeout);
+			newAgilor=new Client(new Connection(newNode.getIp(), 10001, 5000, SimpleProtocol.getInstance()));//new Agilor(newNode.getIp(),Constant.agilorNodeThriftPort,Constant.agilorNodeThriftLongTimeout);
 			newAgilor.open();
 			agilor.open();
-			List<Device> devices=agilor.devices();
+			List<Target> tList=agilor.getAllTag();
 			migrateTargets=new ArrayList<Target>();
+
 			ConsistentHash tmpNodeList=getNodeList();
-			for(int i=0;i<devices.size();i++){
-				List<Target>tList=devices.get(i).targets();
-				for(int j=0;j<tList.size();j++){
-					NodeDevice tmpNodeDevice=tmpNodeList.get(tList.get(j).getName());
-					if(newNode.getIp().compareTo(tmpNodeDevice.getNode().getIp())==0){
-						migrateTargets.add(tList.get(j));
-						ComFuncs.createTag(newAgilor, tList.get(j).getName(), tmpNodeDevice.getDevice(), logger);
+			for(int j=0;j<tList.size();j++){
+				NodeDevice tmpNodeDevice=tmpNodeList.get(tList.get(j).getName());
+				if(newNode.getIp().compareTo(tmpNodeDevice.getNode().getIp())==0&&tList.get(j).getName().contains(Constant.deviceNamePre)==false){
+					migrateTargets.add(tList.get(j));
+					ComFuncs.createTag(newAgilor, tList.get(j).getName(), tmpNodeDevice.getDevice(), logger,new Value(tList.get(j).getType()));
 //						System.out.println("Created : "+tList.get(j).getName());
-					}
 				}
 			}
 			newAgilor.close();
@@ -413,17 +413,35 @@ public class NodeHandler {
 			logger.error("nodelist is null");
 			return ;
 		}
+        Calendar start = Calendar.getInstance();
+        Calendar end = Calendar.getInstance(TimeZone.getTimeZone("GMT"),Locale.CHINA);
+
+        start.set(Calendar.YEAR,1980);
+        start.set(Calendar.MONTH,1);
+        start.set(Calendar.DAY_OF_MONTH,1);
+        start.set(Calendar.HOUR_OF_DAY,1);
+        start.set(Calendar.MINUTE, 1);
+        start.set(Calendar.SECOND,1);
 		try {
-			Agilor newAgilor = new Agilor(newNode.getIp(), Constant.agilorNodeThriftPort, Constant.agilorNodeThriftTimeout);
+			logger.info("enter writeing setion new IP:"+newNode.getIp()+" myNodeIP:"+myNode.getIp());
+			Client newAgilor = new Client(new Connection(newNode.getIp(), 10001, 5000, SimpleProtocol.getInstance()));//new Agilor(newNode.getIp(), Constant.agilorNodeThriftPort, Constant.agilorNodeThriftTimeout);
+			Client myAgilor=new Client(new Connection(myNode.getIp(), 10001, 5000, SimpleProtocol.getInstance()));
+			logger.info("start open");
 			newAgilor.open();
+			myAgilor.open();
 			for(int i=0;i<tags.size();i++){
 				NodeDevice tmpNodeDevice = tmpNodeList.get(tags.get(i).getName());
 				if(tmpNodeDevice.getNode().getIp().compareTo(newNode.getIp())!=0){
 					logger.error(tags.get(i).getName()+" : migrate write error not belong to "+newNode.getIp());
 					continue;
 				}
-				ComFuncs.writeTagValue(newAgilor,tags.get(i),tags.get(i).getValue(),tmpNodeDevice.getDevice(),logger);
+                ValueCollection values= myAgilor.getValue(start, end, tags.get(i).getName());
+				logger.info(tags.get(i).getName()+" : sizeof "+String.valueOf(values.size()));
+                for(int j=0;j<values.size();j++){
+                    ComFuncs.writeTagValue(newAgilor,tags.get(i).getName(),values.get(j),logger,tmpNodeDevice.getDevice());
+                }
 			}
+			myAgilor.close();
 			newAgilor.close();
 		}catch (Exception e){
 			logger.error(e.toString());

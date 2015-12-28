@@ -1,24 +1,16 @@
 package com.agilor.distribute.test;
 
+import com.agilor.distribute.consistenthash.MD5Hash;
+import com.agilor.distribute.consistenthash.Node;
+import com.agilor.distribute.server.nameManager.NodeHandler;
+import org.ini4j.Ini;
+import org.ini4j.InvalidFileFormatException;
+
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-
-import org.apache.thrift.TException;
-import org.apache.thrift.transport.TTransportException;
-import org.ini4j.Ini;
-import org.ini4j.InvalidFileFormatException;
-
-import agilor.distributed.storage.inter.jlient.Agilor;
-import agilor.distributed.storage.inter.jlient.Device;
-
-import com.agilor.distribute.common.ComFuncs;
-import com.agilor.distribute.common.Interface.ConsistentHashVirtualNodeTravel;
-import com.agilor.distribute.consistenthash.MD5Hash;
-import com.agilor.distribute.consistenthash.Node;
-import com.agilor.distribute.server.nameManager.NodeHandler;
 
 public class ServerTestMain {
 
@@ -53,9 +45,9 @@ public class ServerTestMain {
 //		String hostPort = "101.200.77.14:2181";
 		Node myNode = new Node(myNodeIP, VNodeNum, nodeName, nodeID);
 		MD5Hash tmpHash=new MD5Hash();
-		try {
-			Agilor aClient=new Agilor(myNodeIP,9090,20000);
-			aClient.open();
+//		try {
+//			Agilor aClient=new Agilor(myNodeIP,9090,20000);
+//			aClient.open();
 		
 //			ComFuncs.travelInConsistentHash(myNode, new ConsistentHashVirtualNodeTravel() {
 //
@@ -72,17 +64,16 @@ public class ServerTestMain {
 //					}
 //				}
 //			});
-			aClient.close();
-		}catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//			aClient.close();
+//		}catch (Exception e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 		System.out.println("init fine");
 		//zookeeper 
 		NodeHandler test1=new NodeHandler(hostPort,"/NodeInfo","/ClientNodeInfo",myNode);
 		test1.stratHandler();
-		
 		
 	}
 

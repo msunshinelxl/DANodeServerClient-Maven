@@ -5,14 +5,14 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import agilor.distributed.communication.client.Client;
+import agilor.distributed.communication.client.Value;
+import agilor.distributed.communication.protocol.SimpleProtocol;
+import agilor.distributed.communication.socket.Connection;
 import com.agilor.distribute.common.ComFuncs;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import agilor.distributed.storage.inter.jlient.Agilor;
-import agilor.distributed.storage.inter.jlient.Device;
-import agilor.distributed.storage.inter.jlient.Target;
-import agilor.distributed.storage.inter.jlient.Val;
 
 import com.agilor.distribute.common.Constant;
 import com.agilor.distribute.consistenthash.NodeDevice;
@@ -27,40 +27,40 @@ public class AgilorDistributeClient {
 	}
 	
 	private interface DistributeLogInterface{
-		void mainNodeCallBack(Agilor agilor) throws Exception;
-		void tmpNodeCallBack(Agilor agilor) throws Exception;
+		void mainNodeCallBack(Client agilor) throws Exception;
+		void tmpNodeCallBack(Client agilor) throws Exception;
 	}
 	
 	
 	final static Logger logger = LoggerFactory.getLogger(LogTestMain.class);
-	Map<String,Agilor>activityAgilor;
+	Map<String,Client>activityAgilor;
 	public AgilorDistributeClient() {
-		activityAgilor=new HashMap<String, Agilor>();
+		activityAgilor=new HashMap<String, Client>();
 	}
 
 //	public Agilor openSession
-	public void createTagNode(String tagName) {
+	public void createTagNode(String tagName,Value val) {
 		DistributeInfo distributeInfo = getDistributeInfo(tagName);
 		try {
 			distributeLogFrame(tagName,distributeInfo,new DistributeLogInterface(){
 
 				@Override
-				public void mainNodeCallBack(Agilor agilor) throws Exception {
+				public void mainNodeCallBack(Client agilor) throws Exception {
 					// TODO Auto-generated method stub
-						if (ComFuncs.createTag(agilor, tagName, distributeInfo.main.getDevice(), logger) == false)
+						if (ComFuncs.createTag(agilor, tagName, distributeInfo.main.getDevice(), logger,val) == false)
 							logger.error("create failed :"
 									+ distributeInfo.main.getNode().getIp() + " : "
-									+ distributeInfo.main.getDevice().getName() + " : "
+									+ distributeInfo.main.getDevice() + " : "
 									+ tagName);
 				}
 
 				@Override
-				public void tmpNodeCallBack(Agilor agilor) throws Exception{
+				public void tmpNodeCallBack(Client agilor) throws Exception{
 					// TODO Auto-generated method stub
-					if (ComFuncs.createTag(agilor, tagName, distributeInfo.tmp.getDevice(),logger)==false)
+					if (ComFuncs.createTag(agilor, tagName, distributeInfo.tmp.getDevice(),logger,val)==false)
 						logger.error("create failed :"
 								+ distributeInfo.tmp.getNode().getIp() + " : "
-								+ distributeInfo.tmp.getDevice().getName() + " : "
+								+ distributeInfo.tmp.getDevice() + " : "
 								+ tagName);
 				}
 				
@@ -71,22 +71,22 @@ public class AgilorDistributeClient {
 		}
 	}
 
-	public void write(String tagName,Val value){
+	public void write(String tagName,Value value){
 		DistributeInfo distributeInfo=getDistributeInfo(tagName);
 		try {
 			
 			distributeLogFrame(tagName,distributeInfo,new DistributeLogInterface(){
 
 				@Override
-				public void mainNodeCallBack(Agilor agilor) throws Exception{
+				public void mainNodeCallBack(Client agilor) throws Exception{
 					// TODO Auto-generated method stub
-					ComFuncs.writeTagValue(agilor, tagName, value, distributeInfo.main.getDevice(),logger);
+					ComFuncs.writeTagValue(agilor, tagName, value,logger, distributeInfo.main.getDevice());
 				}
 
 				@Override
-				public void tmpNodeCallBack(Agilor agilor) throws Exception{
+				public void tmpNodeCallBack(Client agilor) throws Exception{
 					// TODO Auto-generated method stub
-					ComFuncs.writeTagValue(agilor, tagName, value, distributeInfo.tmp.getDevice(),logger);
+					ComFuncs.writeTagValue(agilor, tagName, value ,logger,distributeInfo.tmp.getDevice());
 				}
 			});
 		} catch (Exception e) {
@@ -96,9 +96,9 @@ public class AgilorDistributeClient {
 	}
 	
 	public void close(){
-		Iterator<Entry<String, Agilor>> it = activityAgilor.entrySet().iterator();
+		Iterator<Entry<String, Client>> it = activityAgilor.entrySet().iterator();
 	    while (it.hasNext()) {
-	        Map.Entry<String,Agilor> pair = it.next();
+	        Map.Entry<String,Client> pair = it.next();
 	        try {
 				pair.getValue().close();
 			} catch (Exception e) {
@@ -112,14 +112,13 @@ public class AgilorDistributeClient {
 	}
 	
 	// private method *********************************************************
-	private Agilor getAgilor(NodeDevice disInfo){
+	private Client getAgilor(NodeDevice disInfo){
 		String keyName=disInfo.getNode().getIp();
 		if(activityAgilor.containsKey(keyName)){
 			return activityAgilor.get(keyName);
 		}else{
 			try {
-				Agilor tmpAgilor=new Agilor(disInfo.getNode().getIp(),
-						Constant.agilorNodeThriftPort, Constant.agilorNodeThriftTimeout);
+				Client tmpAgilor=new Client(new Connection(disInfo.getNode().getIp(), Constant.agilorServerPort, Constant.agilorNodeServerTimeout, SimpleProtocol.getInstance()));
 				tmpAgilor.open();
 				activityAgilor.put(keyName, tmpAgilor);
 				return tmpAgilor;
@@ -135,7 +134,7 @@ public class AgilorDistributeClient {
 	private void distributeLogFrame(String tagName,DistributeInfo distributeInfo,DistributeLogInterface callback){
 		if (distributeInfo.main != null) {
 			try {
-				Agilor agilor=getAgilor(distributeInfo.main);
+				Client agilor=getAgilor(distributeInfo.main);
 				if(agilor==null){
 					return;
 				}
@@ -150,7 +149,7 @@ public class AgilorDistributeClient {
 		}
 		if (distributeInfo.tmp != null) {
 			try {
-				Agilor agilor=getAgilor(distributeInfo.tmp);
+				Client agilor=getAgilor(distributeInfo.tmp);
 				if(agilor==null){
 					return;
 				}
