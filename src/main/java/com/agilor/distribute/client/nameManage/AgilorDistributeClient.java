@@ -27,8 +27,8 @@ public class AgilorDistributeClient {
 	}
 	
 	private interface DistributeLogInterface{
-		void mainNodeCallBack(Client agilor) throws Exception;
-		void tmpNodeCallBack(Client agilor) throws Exception;
+		int mainNodeCallBack(Client agilor) throws Exception;
+		int tmpNodeCallBack(Client agilor) throws Exception;
 	}
 	
 	
@@ -39,59 +39,70 @@ public class AgilorDistributeClient {
 	}
 
 //	public Agilor openSession
-	public void createTagNode(String tagName,Value val) {
+	public int createTagNode(String tagName,Value val) {
 		DistributeInfo distributeInfo = getDistributeInfo(tagName);
 		try {
-			distributeLogFrame(tagName,distributeInfo,new DistributeLogInterface(){
+			return distributeLogFrame(tagName,distributeInfo,new DistributeLogInterface(){
 
 				@Override
-				public void mainNodeCallBack(Client agilor) throws Exception {
+				public int mainNodeCallBack(Client agilor) throws Exception {
 					// TODO Auto-generated method stub
-						if (ComFuncs.createTag(agilor, tagName, distributeInfo.main.getDevice(), logger,val) == false)
-							logger.error("create failed :"
-									+ distributeInfo.main.getNode().getIp() + " : "
-									+ distributeInfo.main.getDevice() + " : "
-									+ tagName);
+					if (ComFuncs.createTag(agilor, tagName, distributeInfo.main.getDevice(), logger,val) == false){
+						logger.error("create failed :"
+								+ distributeInfo.main.getNode().getIp() + " : "
+								+ distributeInfo.main.getDevice() + " : "
+								+ tagName);
+						return Constant.ERROR_FROM_AGILOR;
+					}
+					return Constant.SUCESS;
+
 				}
 
 				@Override
-				public void tmpNodeCallBack(Client agilor) throws Exception{
+				public int tmpNodeCallBack(Client agilor) throws Exception{
 					// TODO Auto-generated method stub
-					if (ComFuncs.createTag(agilor, tagName, distributeInfo.tmp.getDevice(),logger,val)==false)
+					if (ComFuncs.createTag(agilor, tagName, distributeInfo.tmp.getDevice(),logger,val)==false){
 						logger.error("create failed :"
 								+ distributeInfo.tmp.getNode().getIp() + " : "
 								+ distributeInfo.tmp.getDevice() + " : "
 								+ tagName);
+						return Constant.ERROR_FROM_AGILOR;
+					}
+					return Constant.SUCESS;
 				}
 				
 			});
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return Constant.ERROR_DEFAULT;
 		}
 	}
 
-	public void write(String tagName,Value value){
+	public int write(String tagName,Value value){
 		DistributeInfo distributeInfo=getDistributeInfo(tagName);
 		try {
 			
-			distributeLogFrame(tagName,distributeInfo,new DistributeLogInterface(){
+			return distributeLogFrame(tagName,distributeInfo,new DistributeLogInterface(){
 
 				@Override
-				public void mainNodeCallBack(Client agilor) throws Exception{
+				public int mainNodeCallBack(Client agilor) throws Exception{
 					// TODO Auto-generated method stub
 					ComFuncs.writeTagValue(agilor, tagName, value,logger, distributeInfo.main.getDevice());
+					return Constant.SUCESS;
 				}
 
 				@Override
-				public void tmpNodeCallBack(Client agilor) throws Exception{
+				public int tmpNodeCallBack(Client agilor) throws Exception{
 					// TODO Auto-generated method stub
 					ComFuncs.writeTagValue(agilor, tagName, value ,logger,distributeInfo.tmp.getDevice());
+					return Constant.SUCESS;
 				}
 			});
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			return Constant.ERROR_FROM_AGILOR;
 		}
 	}
 	
@@ -131,36 +142,42 @@ public class AgilorDistributeClient {
 	}
 	
 	
-	private void distributeLogFrame(String tagName,DistributeInfo distributeInfo,DistributeLogInterface callback){
+	private int distributeLogFrame(String tagName,DistributeInfo distributeInfo,DistributeLogInterface callback){
+		int result=0;
 		if (distributeInfo.main != null) {
 			try {
 				Client agilor=getAgilor(distributeInfo.main);
 				if(agilor==null){
-					return;
+					return Constant.ERROR_AGILORINI_FAIL;
 				}
-				callback.mainNodeCallBack(agilor);
+				result=callback.mainNodeCallBack(agilor);
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+				return Constant.ERROR_DEFAULT;
 			}
 		} else {
 			logger.error("create failed : NodeDevice Main is null " + " : "
 					+ tagName);
+			return Constant.ERROR_DISTRIBUTION_INFO;
 		}
 		if (distributeInfo.tmp != null) {
 			try {
 				Client agilor=getAgilor(distributeInfo.tmp);
 				if(agilor==null){
-					return;
+					return Constant.ERROR_AGILORINI_FAIL;
 				}
-				callback.tmpNodeCallBack(agilor);
 				logger.info("create : NodeDevice Tmp is created " + " : "
 						+ tagName);
+				return result==0?callback.tmpNodeCallBack(agilor):result;
+
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
+				return Constant.ERROR_DEFAULT;
 			}
 		}else{
+			return Constant.SUCESS;
 		}
 	}
 	

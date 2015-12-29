@@ -32,6 +32,6 @@
     <orderEntry type="library" name="Maven: org.codehaus.jackson:jackson-mapper-asl:1.9.13" level="project" />
     <orderEntry type="library" name="Maven: org.codehaus.jackson:jackson-core-asl:1.9.13" level="project" />
     <orderEntry type="library" name="Maven: org.json:json:20141113" level="project" />
-    <orderEntry type="library" name="unnamed" level="project" />
+    <orderEntry type="library" name="socket.new-1.0-SNAPSHOT" level="project" />
   </component>
 </module>

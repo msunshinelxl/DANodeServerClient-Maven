@@ -16,4 +16,11 @@ public class Constant {
     public final static int TYPESTR=3;
     public final static int TYPEBOOL=4;
 	public final static String deviceNamePre="%#_DeviceState_";
+
+	public final static int ERROR_FROM_AGILOR=5;
+	public final static int ERROR_DISTRIBUTION_INFO=-3;
+	public final static int ERROR_AGILORINI_FAIL=-2;
+	public final static int ERROR_DEFAULT=-1;
+	public final static int SUCESS=0;
+
 }

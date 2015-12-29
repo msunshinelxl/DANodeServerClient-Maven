@@ -49,9 +49,8 @@ public class ComFuncs {
 //		singleClient.open();
 //		Value val = new Value(Value.Types.FLOAT);
 //        setVal(valval, val);
-		singleClient.addTarget(tagName,device, val);
+		return singleClient.addTarget(tagName,device, val);
 //		singleClient.close();
-		return true;
 	}
 
     public static boolean setVal(Object valval,Value val){
