@@ -1,5 +1,6 @@
 package com.agilor.distribute.test;
 
+import com.agilor.distribute.common.Constant;
 import com.agilor.distribute.consistenthash.MD5Hash;
 import com.agilor.distribute.consistenthash.Node;
 import com.agilor.distribute.server.nameManager.NodeHandler;
@@ -18,7 +19,7 @@ public class ServerTestMain {
 		// TODO Auto-generated method stub
 		
 		Ini ini = new Ini();
-		String hostPort = "101.200.77.14:2181";
+		String hostPort = Constant.ZK_IP+":"+Constant.ZK_PORT;
 		String myNodeIP="0.0.0.0";
 		int VNodeNum=300;
 		String nodeName="node1";

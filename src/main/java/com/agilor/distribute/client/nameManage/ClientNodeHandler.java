@@ -1,7 +1,6 @@
 package com.agilor.distribute.client.nameManage;
 
 import java.io.IOException;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import org.apache.zookeeper.KeeperException;
 import org.json.JSONArray;
@@ -47,14 +46,14 @@ public class ClientNodeHandler {
 	}
 	
 	private ClientNodeHandler(){
-		init("101.200.77.14:2181","/ClientNodeInfo");
+		init(Constant.ZK_IP+":"+Constant.ZK_PORT,"/ClientNodeInfo");
 	}
 	private void init(String hostPort,
 			String znodeClientInfo){
 		this.hostPort=hostPort;
 		this.znodeClientInfo=znodeClientInfo;
 		try {
-			taskExecutor = new Executor(hostPort, Constant.zRootNode
+			taskExecutor = new Executor(hostPort, Constant.zkRootPath
 					+ znodeClientInfo,Constant.zkTimeLong);
 		} catch (KeeperException e) {
 			// TODO Auto-generated catch block
@@ -123,7 +122,7 @@ public class ClientNodeHandler {
 					e.printStackTrace();
 				}
 				try {
-					taskExecutor = new Executor(hostPort, Constant.zRootNode
+					taskExecutor = new Executor(hostPort, Constant.zkRootPath
 							+ znodeClientInfo,Constant.zkTimeLong);
 					parent.zk.close();
 				} catch (KeeperException e) {

@@ -21,7 +21,7 @@ public class ClientTestMain {
             for(int i=0;i<100;i++){
                 Value tmp=new Value(Value.Types.FLOAT);
                 tmp.setFvalue(i+(float)12.34);
-                test.write("Simu1."+String.valueOf(i),tmp);
+                test.write("Simu1."+String.valueOf(i),tmp,false);
             }
         System.out.println("方法1(1w):耗时:"+String.valueOf((System.currentTimeMillis()-st)));
     }

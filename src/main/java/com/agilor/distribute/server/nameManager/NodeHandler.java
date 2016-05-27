@@ -5,10 +5,12 @@ import java.util.*;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import agilor.distributed.communication.client.Client;
-import agilor.distributed.communication.client.Target;
 import agilor.distributed.communication.client.Value;
-import agilor.distributed.communication.client.ValueCollection;
 import agilor.distributed.communication.protocol.SimpleProtocol;
+import agilor.distributed.communication.result.GetAllTagResultFuture;
+import agilor.distributed.communication.result.GetValueResultFuture;
+import agilor.distributed.communication.result.TagInfoRes;
+import agilor.distributed.communication.result.ValueRes;
 import agilor.distributed.communication.socket.Connection;
 import com.agilor.distribute.consistenthash.NodeDevice;
 import com.agilor.distribute.test.LogTestMain;
@@ -50,7 +52,7 @@ public class NodeHandler {
 		taskCallback = null;
 		nodeList = new ConsistentHash(new MD5Hash());
 		try {
-			taskExecutor = new Executor(hostPort, Constant.zRootNode
+			taskExecutor = new Executor(hostPort, Constant.zkRootPath
 					+ znodeServerInfo,Constant.zkTimeLong);
 		} catch (KeeperException e) {
 			// TODO Auto-generated catch block
@@ -107,7 +109,7 @@ public class NodeHandler {
 								nodeList.add(tmpNode);
 								try {
 									parent.zk.create(
-											Constant.zRootNode
+											Constant.zkRootPath
 													+ znodeServerInfo + "/"
 													+ tmpNode.getName() + "/"
 													+ myNode.getName(),
@@ -115,20 +117,20 @@ public class NodeHandler {
 											Ids.OPEN_ACL_UNSAFE,
 											CreateMode.PERSISTENT);
 									//migrate my tag to new Node
-									List<Target>tmpRes=addTag2NewNode(tmpNode);
+									List<TagInfoRes>tmpRes=addTag2NewNode(tmpNode);
 									for(int i=0;i<tmpRes.size();i++){
-										System.out.println(tmpRes.get(i).getName());
+										System.out.println(tmpRes.get(i).tagName);
 									}
 									//write
                                     writeHisVal2NewNode(tmpRes,tmpNode);
                                     //end write
 									parent.zk.delete(
-											Constant.zRootNode
+											Constant.zkRootPath
 													+ znodeServerInfo + "/"
 													+ tmpNode.getName() + "/"
 													+ myNode.getName(), -1);
 									System.out.println("delete :"
-											+ Constant.zRootNode
+											+ Constant.zkRootPath
 											+ znodeServerInfo + "/"
 											+ tmpNode.getName() + "/"
 											+ myNode.getName());
@@ -148,7 +150,7 @@ public class NodeHandler {
 							// I'm new node
 							System.out.println("I'm new node or delete node");
 							// create client
-							Stat client = parent.zk.exists(Constant.zRootNode
+							Stat client = parent.zk.exists(Constant.zkRootPath
 									+ znodeClientInfo, false);
 							if (client == null) {
 								//if clientInfo in zk is null init value
@@ -157,7 +159,7 @@ public class NodeHandler {
 								tmpJa.put(myNode.nodeToMap());
 								tmpJo.put(Constant.zkNodeClientFinalListName,
 										tmpJa);
-								parent.zk.create(Constant.zRootNode
+								parent.zk.create(Constant.zkRootPath
 										+ znodeClientInfo, tmpJo.toString()
 										.getBytes(), Ids.OPEN_ACL_UNSAFE,
 										CreateMode.PERSISTENT);
@@ -165,7 +167,7 @@ public class NodeHandler {
 								//put my info to Client
 								JSONObject clientJO = ComFuncs
 										.byte2Json(parent.zk.getData(
-												Constant.zRootNode
+												Constant.zkRootPath
 														+ znodeClientInfo,
 												null, client));
 								JSONArray tmpJa = null;
@@ -192,11 +194,11 @@ public class NodeHandler {
 								} else {
 									System.out.println("Client Info in Zk error! when New one comes");
 								}
-								parent.zk.setData(Constant.zRootNode
+								parent.zk.setData(Constant.zkRootPath
 										+ znodeClientInfo, clientJO.toString()
 										.getBytes(), -1);
 							}
-							parent.zk.create(Constant.zRootNode
+							parent.zk.create(Constant.zkRootPath
 									+ znodeServerInfo + "/" + myNode.getName(),
 									"addNode".getBytes(), Ids.OPEN_ACL_UNSAFE,
 									CreateMode.PERSISTENT);
@@ -207,7 +209,7 @@ public class NodeHandler {
 								Node tmpNode = iter1.next();
 								if (tmpNode.getName().compareTo(
 										myNode.getName()) != 0) {
-									new Executor(hostPort, Constant.zRootNode
+									new Executor(hostPort, Constant.zkRootPath
 											+ znodeServerInfo + "/"
 											+ myNode.getName() + "/"
 											+ tmpNode.getName(),Constant.zkTimeNormal,
@@ -238,7 +240,7 @@ public class NodeHandler {
 																.println("finish Transfer");
 														try {
 															parent.zk
-																	.delete(Constant.zRootNode
+																	.delete(Constant.zkRootPath
 																			+ znodeServerInfo
 																			+ "/"
 																			+ myNode.getName(),
@@ -258,7 +260,7 @@ public class NodeHandler {
 															JSONObject clientJO = ComFuncs
 																	.byte2Json(parent.zk
 																			.getData(
-																					Constant.zRootNode
+																					Constant.zkRootPath
 																							+ znodeClientInfo,
 																					null,
 																					client));
@@ -283,7 +285,7 @@ public class NodeHandler {
 																		tmpJa);
 																parent.zk
 																		.setData(
-																				Constant.zRootNode
+																				Constant.zkRootPath
 																						+ znodeClientInfo,
 																				clientJO.toString()
 																						.getBytes(),
@@ -338,7 +340,7 @@ public class NodeHandler {
 								if (!nodeList.getNodes().isEmpty()
 										&& nodeList.getNodes().size() == 1) {
 									try {
-										parent.zk.delete(Constant.zRootNode
+										parent.zk.delete(Constant.zkRootPath
 												+ znodeServerInfo + "/"
 												+ myNode.getName(), -1);
 									} catch (InterruptedException e) {
@@ -376,24 +378,25 @@ public class NodeHandler {
 		}
 		return nodeList;
 	}
-	private List<Target> addTag2NewNode(Node newNode){
+	private List<TagInfoRes> addTag2NewNode(Node newNode){
 		Client agilor,newAgilor;
-		List<Target> migrateTargets=null;
+		List<TagInfoRes> migrateTargets=null;
 		try {
-			agilor = new Client(new Connection(myNode.getIp(), 10001, 5000, SimpleProtocol.getInstance()));
+			agilor = new Client(new Connection(myNode.getIp(), 10001, SimpleProtocol.getInstance()));
 
-			newAgilor=new Client(new Connection(newNode.getIp(), 10001, 5000, SimpleProtocol.getInstance()));//new Agilor(newNode.getIp(),Constant.agilorNodeThriftPort,Constant.agilorNodeThriftLongTimeout);
+			newAgilor=new Client(new Connection(newNode.getIp(), 10001, SimpleProtocol.getInstance()));//new Agilor(newNode.getIp(),Constant.agilorNodeThriftPort,Constant.agilorNodeThriftLongTimeout);
 			newAgilor.open();
 			agilor.open();
-			List<Target> tList=agilor.getAllTag();
-			migrateTargets=new ArrayList<Target>();
+			GetAllTagResultFuture allTagRes=(GetAllTagResultFuture)agilor.getAllTag();
+            List<TagInfoRes>tList=allTagRes.get(-1,null);
+			migrateTargets=new ArrayList<>();
 
 			ConsistentHash tmpNodeList=getNodeList();
 			for(int j=0;j<tList.size();j++){
-				NodeDevice tmpNodeDevice=tmpNodeList.get(tList.get(j).getName());
-				if(newNode.getIp().compareTo(tmpNodeDevice.getNode().getIp())==0&&tList.get(j).getName().contains(Constant.deviceNamePre)==false){
+				NodeDevice tmpNodeDevice=tmpNodeList.get(tList.get(j).tagName);
+				if(newNode.getIp().compareTo(tmpNodeDevice.getNode().getIp())==0&&!tList.get(j).tagName.contains(Constant.deviceNamePre)){
 					migrateTargets.add(tList.get(j));
-					ComFuncs.createTag(newAgilor, tList.get(j).getName(), tmpNodeDevice.getDevice(), logger,new Value(tList.get(j).getType()));
+					ComFuncs.createTag(newAgilor, tList.get(j).tagName, tmpNodeDevice.getDevice(), logger,new Value(tList.get(j).type));
 //						System.out.println("Created : "+tList.get(j).getName());
 				}
 			}
@@ -407,7 +410,7 @@ public class NodeHandler {
 		}
 	}
 
-	private void writeHisVal2NewNode(List<Target> tags,Node newNode){
+	private void writeHisVal2NewNode(List<TagInfoRes> tags,Node newNode){
 		ConsistentHash tmpNodeList=getNodeList();
 		if(tmpNodeList==null){
 			logger.error("nodelist is null");
@@ -424,21 +427,22 @@ public class NodeHandler {
         start.set(Calendar.SECOND,1);
 		try {
 			logger.info("enter writeing setion new IP:"+newNode.getIp()+" myNodeIP:"+myNode.getIp());
-			Client newAgilor = new Client(new Connection(newNode.getIp(), 10001, 5000, SimpleProtocol.getInstance()));//new Agilor(newNode.getIp(), Constant.agilorNodeThriftPort, Constant.agilorNodeThriftTimeout);
-			Client myAgilor=new Client(new Connection(myNode.getIp(), 10001, 5000, SimpleProtocol.getInstance()));
+			Client newAgilor = new Client(new Connection(newNode.getIp(), 10001, SimpleProtocol.getInstance()));//new Agilor(newNode.getIp(), Constant.agilorNodeThriftPort, Constant.agilorNodeThriftTimeout);
+			Client myAgilor=new Client(new Connection(myNode.getIp(), 10001, SimpleProtocol.getInstance()));
 			logger.info("start open");
 			newAgilor.open();
 			myAgilor.open();
 			for(int i=0;i<tags.size();i++){
-				NodeDevice tmpNodeDevice = tmpNodeList.get(tags.get(i).getName());
+				NodeDevice tmpNodeDevice = tmpNodeList.get(tags.get(i).tagName);
 				if(tmpNodeDevice.getNode().getIp().compareTo(newNode.getIp())!=0){
-					logger.error(tags.get(i).getName()+" : migrate write error not belong to "+newNode.getIp());
+					logger.error(tags.get(i).tagName+" : migrate write error not belong to "+newNode.getIp());
 					continue;
 				}
-                ValueCollection values= myAgilor.getValue(start, end, tags.get(i).getName());
-				logger.info(tags.get(i).getName()+" : sizeof "+String.valueOf(values.size()));
+                GetValueResultFuture resVal= (GetValueResultFuture)myAgilor.getValue(start, end, tags.get(i).tagName);
+                List<ValueRes> values=resVal.get(-1,null);
+				logger.info(tags.get(i).tagName+" : sizeof "+String.valueOf(values.size()));
                 for(int j=0;j<values.size();j++){
-                    ComFuncs.writeTagValue(newAgilor,tags.get(i).getName(),values.get(j),logger,tmpNodeDevice.getDevice());
+                    ComFuncs.writeTagValue(newAgilor,tags.get(i).tagName,values.get(j).value,tmpNodeDevice.getDevice(),false);
                 }
 			}
 			myAgilor.close();

@@ -2,6 +2,7 @@ package com.agilor.distribute.common;
 
 import agilor.distributed.communication.client.Client;
 import agilor.distributed.communication.client.Value;
+import agilor.distributed.communication.result.ResultFuture;
 import com.agilor.distribute.common.Interface.ConsistentHashVirtualNodeTravel;
 import com.agilor.distribute.consistenthash.Node;
 import org.json.JSONObject;
@@ -19,10 +20,10 @@ public class ComFuncs {
 	
 	public static List<String> getAll(Node node,int index)
 	{
-		List<String>res=new ArrayList<String>();
+		final List<String>res=new ArrayList<String>();
 		travelInConsistentHash(node,new ConsistentHashVirtualNodeTravel(){
 
-			@Override
+
 			public void inFor(String vName) {
 				// TODO Auto-generated method stub
 				res.add(vName);
@@ -36,20 +37,19 @@ public class ComFuncs {
 		for (int i = 0; i < node.getVirtualNum(); i++) {
 			String id = node.getIp()+"#"+i;
 			indoing.inFor(id);
-
 		}
 	}
 
-	public static boolean createTag(Client singleClient,String tagName, String device,Logger logger,Value val)
+	public static ResultFuture createTag(Client singleClient,String tagName, String device,Logger logger,Value val)
 			throws Exception {
 		if (device== null) {
 			logger.error("create failed : Node is null " + " : " + tagName);
-			return false;
+			return null;
 		}
 //		singleClient.open();
 //		Value val = new Value(Value.Types.FLOAT);
 //        setVal(valval, val);
-		return singleClient.addTarget(tagName,device, val);
+		return singleClient.addTarget(tagName,device, val,true);
 //		singleClient.close();
 	}
 
@@ -69,7 +69,7 @@ public class ComFuncs {
         return true;
     }
 
-	public static void writeTagValue(Client singleClient,String tagName, Value value,Logger logger,String Device) throws Exception {
+	public static ResultFuture writeTagValue(Client singleClient,String tagName, Value value,String Device,boolean flush) throws Exception {
 //		if (device == null) {
 //			logger.error("write failed : Node is null " + " : " + tagName);
 //			return;
@@ -81,7 +81,7 @@ public class ComFuncs {
 //		target.setDeviceName(device.getName());
 //		target.setGroupName(tagName);
 //		target.write(value);
-        singleClient.addValue(tagName, Device, value);
+        return singleClient.addValue(tagName, Device, value,flush);
 	}
 
 //	public static void writeTagValue(Agilor singleClient,Target target, Val value,

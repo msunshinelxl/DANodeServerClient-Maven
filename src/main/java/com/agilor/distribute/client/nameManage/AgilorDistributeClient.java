@@ -1,13 +1,13 @@
 package com.agilor.distribute.client.nameManage;
 
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 import agilor.distributed.communication.client.Client;
 import agilor.distributed.communication.client.Value;
 import agilor.distributed.communication.protocol.SimpleProtocol;
+import agilor.distributed.communication.result.AddValueResultFuture;
+import agilor.distributed.communication.result.ResultFuture;
 import agilor.distributed.communication.socket.Connection;
 import com.agilor.distribute.common.ComFuncs;
 import org.slf4j.Logger;
@@ -27,8 +27,8 @@ public class AgilorDistributeClient {
 	}
 	
 	private interface DistributeLogInterface{
-		int mainNodeCallBack(Client agilor) throws Exception;
-		int tmpNodeCallBack(Client agilor) throws Exception;
+		ResultFuture mainNodeCallBack(Client agilor) throws Exception;
+		ResultFuture tmpNodeCallBack(Client agilor) throws Exception;
 	}
 	
 	
@@ -39,70 +39,80 @@ public class AgilorDistributeClient {
 	}
 
 //	public Agilor openSession
-	public int createTagNode(String tagName,Value val) {
-		DistributeInfo distributeInfo = getDistributeInfo(tagName);
+
+	/**
+	 * 该函数创建数据点，分为主备两个创建数据点
+	 * @param tagName 点名
+	 * @param val 数据初始化内容
+	 * @return null 表示出现异常或者未初始化Agilor
+	 *         List第一个元素为主点添加返回值，后面为备份节点返回值，错误信息会反映在各元素的errorCode字段上,0表示OK
+	 *
+	 * */
+	public List<ResultFuture> createTagNode(final String tagName,final Value val) {
+		final DistributeInfo distributeInfo = getDistributeInfo(tagName);
 		try {
 			return distributeLogFrame(tagName,distributeInfo,new DistributeLogInterface(){
 
-				@Override
-				public int mainNodeCallBack(Client agilor) throws Exception {
+				public ResultFuture mainNodeCallBack(Client agilor) throws Exception {
 					// TODO Auto-generated method stub
-					if (ComFuncs.createTag(agilor, tagName, distributeInfo.main.getDevice(), logger,val) == false){
-						logger.error("create failed :"
-								+ distributeInfo.main.getNode().getIp() + " : "
-								+ distributeInfo.main.getDevice() + " : "
-								+ tagName);
-						return Constant.ERROR_FROM_AGILOR;
-					}
-					return Constant.SUCESS;
-
+					return ComFuncs.createTag(agilor, tagName, distributeInfo.main.getDevice(), logger,val);
+//					if (res == null){
+//						logger.error("create failed :"
+//								+ distributeInfo.main.getNode().getIp() + " : "
+//								+ distributeInfo.main.getDevice() + " : "
+//								+ tagName);
+////					}
+//					return res;
 				}
-
 				@Override
-				public int tmpNodeCallBack(Client agilor) throws Exception{
+				public ResultFuture tmpNodeCallBack(Client agilor) throws Exception{
 					// TODO Auto-generated method stub
-					if (ComFuncs.createTag(agilor, tagName, distributeInfo.tmp.getDevice(),logger,val)==false){
-						logger.error("create failed :"
-								+ distributeInfo.tmp.getNode().getIp() + " : "
-								+ distributeInfo.tmp.getDevice() + " : "
-								+ tagName);
-						return Constant.ERROR_FROM_AGILOR;
-					}
-					return Constant.SUCESS;
+					return ComFuncs.createTag(agilor, tagName, distributeInfo.main.getDevice(), logger,val);
+//					if (res == null){
+//						logger.error("create failed :"
+//								+ distributeInfo.tmp.getNode().getIp() + " : "
+//								+ distributeInfo.tmp.getDevice() + " : "
+//								+ tagName);
+//					}
+//					return res;
 				}
 				
 			});
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return Constant.ERROR_DEFAULT;
+			return null;
 		}
 	}
-
-	public int write(String tagName,Value value){
+	/**
+	 * 数据写入
+	 * @param tagName 点名
+	 * @param value 点值
+	 * @param flush 是否立即写入，立即写入会影响整体IO
+	 * @return null 表示出现异常或者未初始化Agilor
+	 *         List第一个元素为主点添加返回值，后面为备份节点返回值，错误信息会反映在各元素的errorCode字段上,0表示OK
+	 *
+	 * */
+	public List<ResultFuture> write(final String tagName,final Value value,final boolean flush){
 		DistributeInfo distributeInfo=getDistributeInfo(tagName);
 		try {
 			
 			return distributeLogFrame(tagName,distributeInfo,new DistributeLogInterface(){
 
-				@Override
-				public int mainNodeCallBack(Client agilor) throws Exception{
-					// TODO Auto-generated method stub
-					ComFuncs.writeTagValue(agilor, tagName, value,logger, distributeInfo.main.getDevice());
-					return Constant.SUCESS;
-				}
 
-				@Override
-				public int tmpNodeCallBack(Client agilor) throws Exception{
+				public ResultFuture mainNodeCallBack(Client agilor) throws Exception{
 					// TODO Auto-generated method stub
-					ComFuncs.writeTagValue(agilor, tagName, value ,logger,distributeInfo.tmp.getDevice());
-					return Constant.SUCESS;
+					return ComFuncs.writeTagValue(agilor, tagName, value, distributeInfo.main.getDevice(),flush);
+				}
+				public ResultFuture tmpNodeCallBack(Client agilor) throws Exception{
+					// TODO Auto-generated method stub
+					return ComFuncs.writeTagValue(agilor, tagName, value ,distributeInfo.tmp.getDevice(),flush);
 				}
 			});
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
-			return Constant.ERROR_FROM_AGILOR;
+			return null;
 		}
 	}
 	
@@ -129,7 +139,7 @@ public class AgilorDistributeClient {
 			return activityAgilor.get(keyName);
 		}else{
 			try {
-				Client tmpAgilor=new Client(new Connection(disInfo.getNode().getIp(), Constant.agilorServerPort, Constant.agilorNodeServerTimeout, SimpleProtocol.getInstance()));
+				Client tmpAgilor=new Client(new Connection(disInfo.getNode().getIp(), Constant.agilorServerPort, SimpleProtocol.getInstance()));
 				tmpAgilor.open();
 				activityAgilor.put(keyName, tmpAgilor);
 				return tmpAgilor;
@@ -142,43 +152,53 @@ public class AgilorDistributeClient {
 	}
 	
 	
-	private int distributeLogFrame(String tagName,DistributeInfo distributeInfo,DistributeLogInterface callback){
-		int result=0;
+	private List<ResultFuture> distributeLogFrame(String tagName,DistributeInfo distributeInfo,DistributeLogInterface callback){
+		List<ResultFuture> result=new ArrayList<>();
 		if (distributeInfo.main != null) {
 			try {
 				Client agilor=getAgilor(distributeInfo.main);
 				if(agilor==null){
-					return Constant.ERROR_AGILORINI_FAIL;
+					return null;
 				}
-				result=callback.mainNodeCallBack(agilor);
+				ResultFuture mainRes=callback.mainNodeCallBack(agilor);
+				if(mainRes==null){
+					result.add(new AddValueResultFuture(Constant.ERROR_FROM_AGILOR));
+				}else{
+					result.add(mainRes);
+				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-				return Constant.ERROR_DEFAULT;
+				return null;
 			}
 		} else {
 			logger.error("create failed : NodeDevice Main is null " + " : "
 					+ tagName);
-			return Constant.ERROR_DISTRIBUTION_INFO;
+			result.add(new AddValueResultFuture(Constant.ERROR_DISTRIBUTION_INFO));
 		}
 		if (distributeInfo.tmp != null) {
 			try {
 				Client agilor=getAgilor(distributeInfo.tmp);
 				if(agilor==null){
-					return Constant.ERROR_AGILORINI_FAIL;
+					return null;
 				}
 				logger.info("create : NodeDevice Tmp is created " + " : "
 						+ tagName);
-				return result==0?callback.tmpNodeCallBack(agilor):result;
-
+				ResultFuture tmpRes=callback.mainNodeCallBack(agilor);
+				if(tmpRes==null){
+					result.add(new AddValueResultFuture(Constant.ERROR_FROM_AGILOR));
+				}else{
+					result.add(tmpRes);
+				}
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
-				return Constant.ERROR_DEFAULT;
+				return null;
 			}
 		}else{
-			return Constant.SUCESS;
+			result.add(new AddValueResultFuture(Constant.ERROR_DISTRIBUTION_INFO));
 		}
+		return result;
 	}
 	
 
