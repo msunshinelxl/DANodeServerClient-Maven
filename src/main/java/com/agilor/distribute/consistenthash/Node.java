@@ -25,7 +25,9 @@ public class Node implements Comparable<Node> {
 //    	 this(null,null,-1);
 //     }
      
-     
+     public Node(int ID){
+		 id=ID;
+	 }
      public Node(String ip,int virtualNum,String name,int id)
      {
     	 this.ip=ip;
@@ -109,7 +111,7 @@ public class Node implements Comparable<Node> {
 	@Override
 	public int compareTo(Node o) {
 		// TODO Auto-generated method stub
-		return name.compareTo(o.name);
+		return id-o.id;
 	}
 	public Map nodeToMap(){
 		HashMap res=new HashMap();

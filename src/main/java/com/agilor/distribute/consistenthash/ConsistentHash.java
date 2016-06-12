@@ -1,6 +1,7 @@
 package com.agilor.distribute.consistenthash;
 
 import java.util.SortedMap;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -22,10 +23,12 @@ public class ConsistentHash<T extends Node> {
 	
 
 	
-	
-	//return  0:OK
-	//       -1:node existed
-	//       -2:unknown error
+	/**
+	 * return  0:OK
+     *        -1:node existed
+     *        -2:unknown error
+	 *
+	 * */
 	public int add(T node) {
 		myLock.writeLock().lock();
 		//add virtual nodes
@@ -71,6 +74,9 @@ public class ConsistentHash<T extends Node> {
 			}
 			
 		});
+        if(nodeSet.contains(node)){
+            nodeSet.remove(node);
+        }
 //		for (int i = 0; i < node.getVirtualNum(); i++) {
 //			circle.remove(createId(node, i));
 //		}
@@ -92,6 +98,17 @@ public class ConsistentHash<T extends Node> {
 		myLock.readLock().unlock();
 		return res;
 	}
+
+    public Node getNextNode(Node mynode){
+        myLock.readLock().lock();
+        if (nodeSet.isEmpty()) {
+            myLock.readLock().unlock();
+            return null;
+        }
+        SortedSet<Node> subset=nodeSet.tailSet(mynode);
+        myLock.readLock().unlock();
+        return subset.isEmpty()?nodeSet.first():subset.first();
+    }
 
 //	public SortedMap<Integer, T> getVirtualNodes()
 //	{
@@ -118,5 +135,11 @@ public class ConsistentHash<T extends Node> {
 		circle.clear();
 		myLock.writeLock().unlock();
 	}
-	
+
+
+    public void showContent(){
+        nodeSet.forEach((Node item)->{
+            System.out.println(item.nodeToMap().toString());
+        });
+    }
 }

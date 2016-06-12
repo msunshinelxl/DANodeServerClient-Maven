@@ -10,15 +10,15 @@ public class ClientTestMain {
 	public static void  addTagTest(){
         long st=System.currentTimeMillis();
         AgilorDistributeClient test=new AgilorDistributeClient();
-        for(int i=0;i<100;i++)
+        for(int i=0;i<1000;i++)
             test.createTagNode("Simu1."+String.valueOf(i),new Value(Value.Types.FLOAT));
         System.out.println("方法1(1w):耗时:"+String.valueOf((System.currentTimeMillis()-st)));
     }
     public static void writeValue(){
         long st=System.currentTimeMillis();
         AgilorDistributeClient test=new AgilorDistributeClient();
-        for(int j=0;j<100;j++)
-            for(int i=0;i<100;i++){
+        for(int j=0;j<10000;j++)
+            for(int i=0;i<1000;i++){
                 Value tmp=new Value(Value.Types.FLOAT);
                 tmp.setFvalue(i+(float)12.34);
                 test.write("Simu1."+String.valueOf(i),tmp,false);

@@ -5,6 +5,9 @@ public class Constant {
 	public final static String zkNodeClientTmpListName="tmpList";
 	public final static String zkRootPath ="/agilorRootPath";
 	public final static String zkNodePath="/nodes";
+	public final static String zkClientPath="/clients";
+    public final static String zkDynamicPath="/nodes_dynamic";
+    public final static String zkStatSubPath="/stat";
 	public final static int agilorNodeThriftPort=9090;
     public final static int agilorServerPort=10001;
 	public final static int agilorNodeServerTimeout=20000;

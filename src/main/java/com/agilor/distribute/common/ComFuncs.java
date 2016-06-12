@@ -35,7 +35,7 @@ public class ComFuncs {
 	
 	public static void travelInConsistentHash(Node node,ConsistentHashVirtualNodeTravel indoing){
 		for (int i = 0; i < node.getVirtualNum(); i++) {
-			String id = node.getIp()+"#"+i;
+			String id = node.getId()+"#"+i;
 			indoing.inFor(id);
 		}
 	}

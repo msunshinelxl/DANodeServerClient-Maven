@@ -145,7 +145,7 @@ public class AgilorDistributeClient {
 				return tmpAgilor;
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
-				logger.error("create Agilor failed : "+e.toString());
+				logger.error("create Agilor failed : ip: "+keyName+" "+e.toString());
 				return null;
 			}
 		}
